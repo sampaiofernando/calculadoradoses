@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Cálculo de Dose por Peso</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f4f8;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      background: #fff;
+      padding: 30px 40px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      max-width: 480px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    h2, h3 {
+      text-align: center;
+      color: #2c3e50;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      margin-bottom: 5px;
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+
+    button {
+      margin-top: 15px;
+      width: 100%;
+      background: #3498db;
+      color: #fff;
+      border: none;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #2980b9;
+    }
+
+    .btn-secondary {
+      background: #95a5a6;
+    }
+
+    .btn-secondary:hover {
+      background: #7f8c8d;
+    }
+
+    #resultado {
+      margin-top: 20px;
+      padding: 15px;
+      background: #ecf0f1;
+      border-radius: 6px;
+      font-size: 15px;
+    }
+
+    strong {
+      color: #2c3e50;
+    }
+
+    hr {
+      margin: 30px 0 20px;
+      border: none;
+      border-top: 1px solid #ddd;
+    }
+
+    #formularioCadastro,
+    #importExportArea {
+      display: none;
+    }
+
+    input[type="file"] {
+      padding: 5px;
+    }
+
+    footer {
+      margin-top: 40px;
+      font-size: 14px;
+      color: #777;
+      text-align: center;
+    }
+
+    @media (max-width: 500px) {
+      .container {
+        padding: 20px;
+      }
+
+      h2, h3 {
+        font-size: 20px;
+      }
+
+      label {
+        font-size: 14px;
+      }
+
+      input, select, button {
+        font-size: 14px;
+        padding: 10px;
+      }
+
+      #resultado {
+        font-size: 14px;
+      }
+
+      footer {
+        font-size: 13px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Cálculo de Dose por Peso</h2>
+
+    <label for="peso">Peso (kg):</label>
+    <input type="number" id="peso" step="0.1">
+
+    <label for="medicamento">Medicamento:</label>
+    <select id="medicamento">
+      <option value="">--Selecione--</option>
+    </select>
+
+    <button onclick="calcularDose()">Calcular dose</button>
+    <button onclick="calcularTodos()">Calcular para todos os medicamentos</button>
+
+    <div id="resultado"></div>
+
+    <hr>
+
+    <button id="btnCadastro" onclick="toggleFormulario()">Cadastrar novo medicamento</button>
+
+    <div id="formularioCadastro">
+      <h3>Cadastrar novo medicamento</h3>
+
+      <label for="novoNome">Nome:</label>
+      <input type="text" id="novoNome">
+
+      <label for="novoMin">Dose mínima:</label>
+      <input type="number" id="novoMin" step="0.01">
+
+      <label for="novoMax">Dose máxima:</label>
+      <input type="number" id="novoMax" step="0.01">
+
+      <label for="novaUnidade">Unidade:</label>
+      <select id="novaUnidade">
+        <option value="mg">mg/kg</option>
+        <option value="mcg">mcg/kg</option>
+      </select>
+
+      <button onclick="adicionarMedicamento()">Adicionar medicamento</button>
+    </div>
+
+    <hr>
+
+    <button id="btnImportExport" onclick="toggleImportExport()">Importar ou Exportar Lista de Medicamentos</button>
+
+    <div id="importExportArea">
+      <button class="btn-secondary" onclick="exportarMedicamentos()">Exportar meus medicamentos</button>
+      <label for="importar" style="margin-top:10px;">Importar medicamentos:</label>
+      <input type="file" id="importar" accept=".json" onchange="importarMedicamentos(this)">
+    </div>
+  </div>
+
+  <footer>
+    Desenvolvido por <strong>Fernando Sampaio</strong>
+  </footer>
+
+  <script>
+    let medicamentos = {
+      "Atropina": { min: 0.02, max: 0.04, unidade: "mg" },
+      "Cefazolina": { min: 20, max: 30, unidade: "mg" },
+      "Cis": { min: 0.15, max: 0.15, unidade: "mg" },
+      "Clindamicina": { min: 300, max: 300, unidade: "mg", fixa: true },
+      "Clonidina": { min: 1, max: 1, unidade: "mcg" },
+      "Dexametasona": { min: 0.15, max: 0.15, unidade: "mg" },
+      "Dipirona": { min: 20, max: 30, unidade: "mg" },
+      "Fentanil": { min: 1, max: 2, unidade: "mcg" },
+      "Hidrocortisona": { min: 4, max: 8, unidade: "mg" },
+      "Ipsilon": { min: 20, max: 20, unidade: "mg" },
+      "Ketamina": { min: 0.5, max: 0.5, unidade: "mg" },
+      "Lidocaína s/v": { min: 1, max: 1, unidade: "mg" },
+      "Morfina": { min: 0.05, max: 1, unidade: "mg" },
+      "Neo": { min: 0.04, max: 0.07, unidade: "mg" },
+      "Ondansetrona": { min: 0.2, max: 0.2, unidade: "mg" },
+      "Precedex": { min: 1, max: 1, unidade: "mcg" },
+      "Propofol": { min: 2, max: 3, unidade: "mg" },
+      "Remifentanil": { min: 1, max: 1, unidade: "mg" },
+      "Succinilcolina": { min: 1, max: 1, unidade: "mg" },
+      "Transamin": { min: 10, max: 10, unidade: "mg" },
+      "Tramadol": { min: 1, max: 2, unidade: "mg" }
+    };
+
+    const select = document.getElementById("medicamento");
+
+    function carregarMedicamentos() {
+      const salvos = localStorage.getItem("medicamentosExtra");
+      if (salvos) {
+        const extras = JSON.parse(salvos);
+        for (let nome in extras) {
+          medicamentos[nome] = extras[nome];
+        }
+      }
+      atualizarSelect();
+    }
+
+    function atualizarSelect() {
+      select.innerHTML = '<option value="">--Selecione--</option>';
+      const nomes = Object.keys(medicamentos).sort((a, b) => a.localeCompare(b));
+      for (let med of nomes) {
+        const option = document.createElement("option");
+        option.value = med;
+        option.textContent = med;
+        select.appendChild(option);
+      }
+    }
+
+    function calcularDose() {
+      const peso = parseFloat(document.getElementById("peso").value);
+      const med = select.value;
+      const resultado = document.getElementById("resultado");
+
+      if (!peso || !med) {
+        resultado.innerHTML = "Preencha o peso e selecione um medicamento.";
+        return;
+      }
+
+      const dados = medicamentos[med];
+      let minDose = dados.fixa ? dados.min : peso * dados.min;
+      let maxDose = dados.fixa ? dados.max : peso * dados.max;
+
+      let textoResultado = `<strong>${med}</strong><br>`;
+      textoResultado += `Dose de referência: ${dados.min} a ${dados.max} ${dados.unidade}/kg<br><br>`;
+      textoResultado += minDose === maxDose
+        ? `Dose: ${minDose.toFixed(2)} ${dados.unidade}`
+        : `Dose mínima: ${minDose.toFixed(2)} ${dados.unidade}<br>Dose máxima: ${maxDose.toFixed(2)} ${dados.unidade}`;
+
+      resultado.innerHTML = textoResultado;
+    }
+
+    function calcularTodos() {
+      const peso = parseFloat(document.getElementById("peso").value);
+      const resultado = document.getElementById("resultado");
+
+      if (!peso) {
+        resultado.innerHTML = "Informe o peso para calcular todas as doses.";
+        return;
+      }
+
+      let texto = "";
+      const nomes = Object.keys(medicamentos).sort((a, b) => a.localeCompare(b));
+
+      for (let nome of nomes) {
+        const dados = medicamentos[nome];
+        let min = dados.fixa ? dados.min : peso * dados.min;
+        let max = dados.fixa ? dados.max : peso * dados.max;
+
+        texto += `<strong>${nome}</strong><br>`;
+        texto += `Dose de referência: ${dados.min} a ${dados.max} ${dados.unidade}/kg<br>`;
+        texto += min === max
+          ? `Dose: ${min.toFixed(2)} ${dados.unidade}`
+          : `Dose mínima: ${min.toFixed(2)} ${dados.unidade} | Dose máxima: ${max.toFixed(2)} ${dados.unidade}`;
+        texto += "<br><br>";
+      }
+
+      resultado.innerHTML = texto;
+    }
+
+    function adicionarMedicamento() {
+      const nome = document.getElementById("novoNome").value.trim();
+      const min = parseFloat(document.getElementById("novoMin").value);
+      const max = parseFloat(document.getElementById("novoMax").value);
+      const unidade = document.getElementById("novaUnidade").value;
+
+      if (!nome || isNaN(min) || isNaN(max)) {
+        alert("Preencha todos os campos corretamente.");
+        return;
+      }
+
+      if (medicamentos[nome]) {
+        alert("Esse medicamento já está cadastrado.");
+        return;
+      }
+
+      medicamentos[nome] = { min, max, unidade };
+
+      const extras = JSON.parse(localStorage.getItem("medicamentosExtra") || "{}");
+      extras[nome] = { min, max, unidade };
+      localStorage.setItem("medicamentosExtra", JSON.stringify(extras));
+
+      atualizarSelect();
+      alert(`Medicamento "${nome}" adicionado com sucesso!`);
+
+      document.getElementById("novoNome").value = "";
+      document.getElementById("novoMin").value = "";
+      document.getElementById("novoMax").value = "";
+    }
+
+    function toggleFormulario() {
+      const form = document.getElementById("formularioCadastro");
+      const btn = document.getElementById("btnCadastro");
+      const visivel = form.style.display === "block";
+      form.style.display = visivel ? "none" : "block";
+      btn.textContent = visivel ? "Cadastrar novo medicamento" : "Esconder formulário";
+    }
+
+    function toggleImportExport() {
+      const area = document.getElementById("importExportArea");
+      const btn = document.getElementById("btnImportExport");
+      const visivel = area.style.display === "block";
+      area.style.display = visivel ? "none" : "block";
+      btn.textContent = visivel
+        ? "Importar ou Exportar Lista de Medicamentos"
+        : "Esconder opções de importação/exportação";
+    }
+
+    function exportarMedicamentos() {
+      const extras = JSON.parse(localStorage.getItem("medicamentosExtra") || "{}");
+      const blob = new Blob([JSON.stringify(extras, null, 2)], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "meus_medicamentos.json";
+      link.click();
+    }
+
+    function importarMedicamentos(input) {
+      const file = input.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        try {
+          const dados = JSON.parse(event.target.result);
+          for (let nome in dados) {
+            medicamentos[nome] = dados[nome];
+          }
+          localStorage.setItem("medicamentosExtra", JSON.stringify(dados));
+          atualizarSelect();
+          alert("Medicamentos importados com sucesso!");
+        } catch (e) {
+          alert("Erro ao importar o arquivo. Verifique se o formato está correto.");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    carregarMedicamentos();
+  </script>
+</body>
+</html>
